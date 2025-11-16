@@ -60,9 +60,7 @@
             padding-bottom: 10px;
             border-bottom: 3px solid #667eea;
         }
-        
-        /* 以下、自由にスタイル追加 */
-        
+
         .input-group {
             margin-bottom: 15px;
         }
@@ -92,6 +90,7 @@
             font-size: 1em;
             cursor: pointer;
             transition: all 0.3s;
+            margin-right: 5px;
         }
         
         button:hover {
@@ -158,9 +157,12 @@
                 
                 <div id="response-area"></div>
                 
-                <!-- ここに自分の機能を追加 -->
+                <!-- ここにカスタム機能を追加 -->
                 <div id="custom-features" style="margin-top: 30px;">
-                    <!-- 自由に機能を追加する場所 -->
+                    <h3>📌 よくある質問</h3>
+                    <button onclick="processQuestionFromShortcut('変数とは何ですか？')">変数とは？</button>
+                    <button onclick="processQuestionFromShortcut('関数とは何ですか？')">関数とは？</button>
+                    <button onclick="processQuestionFromShortcut('再帰とは何ですか？')">再帰とは？</button>
                 </div>
             </div>
             
@@ -170,22 +172,28 @@
                     <h2>📊 情報パネル</h2>
                     
                     <div class="sidebar-section">
-    <h3>システム状態</h3>
-    <div id="system-status">
-        <p>ステータス: <span id="status-text">初期化中</span></p>
-        <p>登録文書数: <span id="doc-count">0</span></p>
-    </div>
-</div>
-
+                        <h3>システム状態</h3>
+                        <div id="system-status">
+                            <p>ステータス: <span id="status-text">初期化中</span></p>
+                            <p>登録文書数: <span id="doc-count">0</span></p>
+                        </div>
+                    </div>
                     
                     <div class="sidebar-section">
                         <h3>統計情報</h3>
                         <div id="statistics">データなし</div>
                     </div>
                     
-                    <!-- ここに自分の機能を追加 -->
+                    <button onclick="showNextTopic()">次の学習トピックを表示</button>
+                    <div id="next-topic"></div>
+
+                    <div class="sidebar-section">
+                        <h3>📖 学習履歴</h3>
+                        <ul id="learning-history-list"><li>なし</li></ul>
+                    </div>
+
                     <div id="custom-sidebar">
-                        <!-- 自由に機能を追加する場所 -->
+                        <!-- 自由に追加可能 -->
                     </div>
                 </div>
             </div>
@@ -200,123 +208,103 @@
     <script src="js/concept-extractor.js"></script>
     <script src="js/semantic-rag.js"></script>
     
-    <script>
-        // グローバル変数
-        let semanticRAG;
-        let questionCount = 0;
-        
-        // 初期化
-      async function initialize() {
-  console.log('🚀 システム初期化中...');
-  updateStatus('初期化中...');
+<script>
+let semanticRAG;
+let questionCount = 0;
+let learningHistory = []; // 新規追加：学習履歴保持
 
-  try {
-    // ✅ オントロジーをロード
-    const ontologyResponse = await fetch("data/learning-ontology.json");
-    const ontologyData = await ontologyResponse.json();
+// 質問処理
+async function processQuestion() {
+    const input = document.getElementById('question-input');
+    const question = input.value.trim();
 
-    // ✅ ドキュメントをロード
-    const documentResponse = await fetch("data/sample-documents.json");
-    const documentsData = await documentResponse.json(); // ← これが必要！
-
-    // ✅ SemanticRAG初期化に引数を渡す
-    semanticRAG = new SemanticRAGSystem();
-    await semanticRAG.initialize(documentsData.documents, ontologyData);
-
-    updateStatus('✅ 準備完了');
-
-    // ✅ 統計更新時に documentsData を渡す
-    updateStatistics(documentsData);
-
-    console.log('✅ システム準備完了');
-  } catch (error) {
-    console.error('初期化エラー:', error);
-    updateStatus('❌ 初期化失敗');
-  }
-}
-
-        // 質問処理（基本実装）
-        async function processQuestion() {
-            const input = document.getElementById('question-input');
-            const question = input.value.trim();
-            
-            if (!question) {
-                alert('質問を入力してください');
-                return;
-            }
-            
-            const responseArea = document.getElementById('response-area');
-            responseArea.className = 'show';
-            responseArea.innerHTML = '<p>🤔 考え中...</p>';
-            
-            try {
-                // SemanticRAGで回答生成
-                const result = await semanticRAG.semanticQuery(question);
-                
-                // 回答を表示
-                responseArea.innerHTML = `
-    <h3>💡 回答</h3>
-    <p>${result.answer || '回答なし'}</p>
-    
-    <h4 style="margin-top: 15px;">🔗 関連概念</h4>
-    <p>${(result.concepts || []).join(', ')}</p>
-    
-    <h4 style="margin-top: 15px;">📚 参考文書</h4>
-    <p>${(result.sources || []).length}件の文書を参照しました</p>
-`;
-                
-                // 統計を更新
-                questionCount++;
-                updateStatistics();
-                
-            } catch (error) {
-                responseArea.innerHTML = `
-                    <p style="color: red;">❌ エラー: ${error.message}</p>
-                `;
-            }
-        }
-        
-        // 回答クリア
-        function clearResponse() {
-            document.getElementById('response-area').className = '';
-            document.getElementById('question-input').value = '';
-        }
-        
-        // システム状態を更新
-        function updateStatus(message) {
-            document.getElementById('system-status').innerHTML = `
-                <p style="padding: 10px; background: white; border-radius: 5px;">
-                    ${message}
-                </p>
-            `;
-        }
-        
-        // 統計情報を更新
-        // function updateStatistics() {
-        //     const stats = document.getElementById('statistics');
-        //     stats.innerHTML = `
-        //         <p style="padding: 10px; background: white; border-radius: 5px;">
-        //             質問数: ${questionCount}回<br>
-        //             登録文書: ${semanticRAG ? semanticRAG.ragSystem.documents.length : 0}件<br>
-        //             概念数: ${semanticRAG ? Object.keys(semanticRAG.ontology.concepts).length : 0}個
-        //         </p>
-        //     `;
-        // }
-      function updateStatistics(documentsData) {
-    const totalDocs = documentsData?.documents?.length || 0;
-    const docCountElem = document.getElementById("doc-count");
-    if (docCountElem) {
-        docCountElem.textContent = totalDocs;
+    if (!question) {
+        alert('質問を入力してください');
+        return;
     }
 
+    const responseArea = document.getElementById('response-area');
+    responseArea.className = 'show';
+    responseArea.innerHTML = '<p>🤔 考え中...</p>';
 
+    try {
+        const result = await semanticRAG.semanticQuery(question);
 
+        responseArea.innerHTML = `
+            <h3>💡 回答</h3>
+            <p>${result.answer || '回答なし'}</p>
 
-    
-    console.log(`📚 登録文書数: ${totalDocs}`);
+            <h4 style="margin-top: 15px;">🔗 関連概念</h4>
+            <p>${(result.concepts || []).join(', ')}</p>
+
+            <h4 style="margin-top: 15px;">📚 参考文書</h4>
+            <p>${(result.sources || []).length}件の文書を参照しました</p>
+        `;
+
+        questionCount++;
+        updateStatistics();
+
+        // 学習履歴に追加
+        if (result.concepts && result.concepts.length > 0) {
+            addToLearningHistory(result.concepts[0]);
+        }
+
+    } catch (error) {
+        responseArea.innerHTML = `<p style="color: red;">❌ エラー: ${error.message}</p>`;
+    }
 }
 
-        async function initialize() {
+// FAQショートカット
+function processQuestionFromShortcut(question) {
+    document.getElementById('question-input').value = question;
+    processQuestion();
+}
+
+// 学習履歴追加
+function addToLearningHistory(concept) {
+    learningHistory.push({ concept: concept, date: new Date().toLocaleString() });
+    renderLearningHistory();
+}
+
+// 学習履歴描画
+function renderLearningHistory() {
+    const list = document.getElementById("learning-history-list");
+    if (learningHistory.length === 0) {
+        list.innerHTML = "<li>なし</li>";
+        return;
+    }
+    list.innerHTML = learningHistory.map(h => `<li>${h.concept} - ${h.date}</li>`).join("");
+}
+
+// 画面クリア
+function clearResponse() {
+    document.getElementById('response-area').className = '';
+    document.getElementById('question-input').value = '';
+}
+
+// ステータス表示
+function updateStatus(message) {
+    document.getElementById('system-status').innerHTML = `
+        <p style="padding: 10px; background: white; border-radius: 5px;">
+            ${message}
+        </p>
+    `;
+}
+
+// 統計情報
+function updateStatistics(documentsData) {
+    if (documentsData) {
+        const totalDocs = documentsData.documents.length;
+        const docCountElem = document.getElementById("doc-count");
+        if (docCountElem) {
+            docCountElem.textContent = totalDocs;
+        }
+        console.log(`📚 登録文書数: ${totalDocs}`);
+    }
+}
+
+// 初期化処理
+async function initialize() {
     console.log('🚀 システム初期化中...');
     updateStatus('初期化中...');
 
@@ -331,69 +319,51 @@
         updateStatistics(documentsData);
         console.log('✅ システム準備完了');
 
-        // 🔹 初期化完了後にプロンプト実験を自動実行
-        experimentPrompts();
-
     } catch (error) {
         console.error('初期化エラー:', error);
         updateStatus('❌ 初期化失敗');
     }
 }
 
-        // ページ読み込み時に初期化
-        window.onload = initialize;
+// 次に学ぶべき概念を推薦
+function recommendNextTopic(learningHistoryLocal, ontology) {
+    const learned = learningHistoryLocal.map(h => h.concept);
 
+    if (learned.length === 0) {
+        return Object.values(ontology.concepts).find(c => c.prerequisites.length === 0);
+    }
 
+    const candidates = Object.values(ontology.concepts).filter(concept => 
+        !learned.includes(concept.id) &&
+        concept.prerequisites.every(p => learned.includes(p))
+    );
 
-// 実験用の関数を作成
-async function experimentSearch() {
-    const query = "ループの使い方";
-    
-    // 方法1: 通常のベクトル検索
-    const vectorResults = await semanticRAG.ragSystem.query(query, 3);
-    console.log('=== ベクトル検索 ===');
-    console.log(vectorResults);
-    
-    // 方法2: オントロジー強化検索
-    const semanticResults = await semanticRAG.semanticQuery(query);
-    console.log('=== オントロジー検索 ===');
-    console.log(semanticResults);
-    
-    // 違いを分析
-    console.log('=== 比較 ===');
-    console.log('ベクトル検索:', vectorResults.sources.length, '件');
-    console.log('オントロジー検索:', semanticResults.sources.length, '件');
-    console.log('抽出された概念:', semanticResults.concepts);
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    const levelOrder = { "beginner": 1, "intermediate": 2, "advanced": 3 };
+    candidates.sort((a,b) => (levelOrder[a.level] || 99) - (levelOrder[b.level] || 99));
+
+    return candidates[0];
 }
 
-// // 実験用の関数を作成
-// window.experimentSearch = async function() {
-//     const query = "ループの使い方";
-    
-//     // 方法1: 通常のベクトル検索
-//     const vectorResults = await semanticRAG.ragSystem.query(query, 3);
-//     console.log('=== ベクトル検索 ===');
-//     console.log(vectorResults);
-    
-//     // 方法2: オントロジー強化検索
-//     const semanticResults = await semanticRAG.semanticQuery(query);
-//     console.log('=== オントロジー検索 ===');
-//     console.log(semanticResults);
-    
-//     // 違いを分析
-//     console.log('=== 比較 ===');
-//     console.log('ベクトル検索:', vectorResults.sources.length, '件');
-//     console.log('オントロジー検索:', semanticResults.sources.length, '件');
-//     console.log('抽出された概念:', semanticResults.concepts);
-// }
+function showNextTopic() {
+    const nextTopic = recommendNextTopic(learningHistory, semanticRAG.ontology);
+    const div = document.getElementById('next-topic');
 
+    if (nextTopic) {
+        div.textContent = `次に学ぶべき概念: ${nextTopic.label} - ${nextTopic.description}`;
+        addToLearningHistory(nextTopic.label);
+    } else {
+        div.textContent = '次に学ぶべき概念はありません';
+    }
+}
 
+// ページロード時に初期化
+window.onload = initialize;
+window.recommendNextTopic = recommendNextTopic;
+</script>
 
-
-
-
-
-        
-    </script>
 </body>
 </html>
